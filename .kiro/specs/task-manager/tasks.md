@@ -4,6 +4,28 @@
 
 This implementation plan extends the existing todo-list implementation with enterprise-grade practices including BDD-first development, domain-driven design, comprehensive testing, and observability infrastructure.
 
+## 🔧 **COMPLIANCE UPDATES (Based on Global Rules Analysis)**
+
+**CRITICAL FIXES (BDD First & Architecture Compliance):**
+- **6.6**: BDD integration with real repositories (No-Mocks Drift rule)
+- **6.7**: Domain-level composition root for TEST environment
+- **9.8**: EventBus integration with UI components (Event-driven frontend)
+
+**ARCHITECTURE COMPLETIONS:**
+- **4.6**: Gallery Index integration (Gallery rule)
+- **10.2**: Environment-specific config files (DI configuration)
+- **11.4**: Global Report generation (Observability)
+- **12.5**: Test Data Builder pattern (Testing standards)
+- **12.6**: BDD style DSL for unit tests (Testing standards)
+
+**GOVERNANCE & PROCESS:**
+- **11.5**: Correlation ID integration with BDD/E2E
+- **15.1**: CHANGE management process
+- **15.2**: Baseline creation process  
+- **15.3**: Documentation generation
+
+---
+
 - [x] 1. Create BDD scenarios (BDD FIRST - Regra Mestra)
   - [x] 1.1 Set up domain structure and BDD framework
     - Create `src/domains/task/bdd/` directory structure
@@ -99,7 +121,12 @@ This implementation plan extends the existing todo-list implementation with ente
     - Test responsive behavior and MUI breakpoints
     - Validate accessibility with MUI components
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
-    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+
+  - [ ] 4.6 Integrate all UI components to Gallery Index
+    - Update gallery/gallery.tsx to include all component galleries
+    - Ensure TaskManagerAppGallery is properly integrated
+    - Add navigation between component galleries
+    - _Requirements: Gallery integration rule_
 
 - [x] 5. Implement shared infrastructure
   - [x] 5.1 Create centralized logger in SHARED/logger/
@@ -142,6 +169,19 @@ This implementation plan extends the existing todo-list implementation with ente
   - [x] 6.5 Write property test for state restoration
     - **Property 8: State Restoration Round-Trip**
     - **Validates: Requirements 4.1, 4.2**
+
+  - [ ] 6.6 Update BDD integration with real repositories (BDD First Compliance)
+    - Update common.steps.ts to use MemoryTaskRepository via DI
+    - Modify all BDD steps to use real repository methods instead of mocks
+    - Remove simulateLocalStorage() and replace with MemoryTaskRepository
+    - Ensure BDD validates actual implementation behavior
+    - _Requirements: BDD First compliance, No-Mocks Drift rule_
+
+  - [ ] 6.7 Create domain-level composition root for TEST environment
+    - Create src/domains/task/config/test.ts
+    - Set up DI container with MemoryTaskRepository
+    - Configure EventBus handlers for domain
+    - _Requirements: Architecture compliance, DI pattern_
 
 - [ ] 7. Implement service layer in domains/task/services/
   - [ ] 7.1 Create TaskService with business logic
@@ -210,6 +250,13 @@ This implementation plan extends the existing todo-list implementation with ente
     - Handle application-level logging and correlation
     - _Requirements: All requirements (integration)_
 
+  - [ ] 9.8 Integrate EventBus with UI components
+    - Connect TaskInput to EventBus for task creation events
+    - Connect TaskItem to EventBus for toggle/delete events
+    - Connect TaskList to EventBus for state updates
+    - Implement UI.TASK.*, DOMAIN.TASK.* event types
+    - _Requirements: Event-driven frontend architecture_
+
 - [ ] 10. Implement composition root and dependency injection
   - [ ] 10.1 Create application composition root in config/
     - Set up dependency injection for services and repositories
@@ -218,6 +265,12 @@ This implementation plan extends the existing todo-list implementation with ente
     - Initialize EventBus with proper handlers
     - Set up centralized logger configuration
     - _Requirements: All requirements (architectural)_
+
+  - [ ] 10.2 Create environment-specific config files
+    - Create config/test.ts with MemoryRepository configuration
+    - Create config/prod.ts with LocalStorageRepository configuration
+    - Implement environment detection and switching
+    - _Requirements: Environment isolation, DI configuration_
 
 - [ ] 11. Create automation scripts
   - [ ] 11.1 Create test execution scripts
@@ -241,6 +294,19 @@ This implementation plan extends the existing todo-list implementation with ente
     - Ensure all scripts are non-interactive (no human input waiting)
     - Configure CI pipeline with lint + format + typecheck + unit/component + BDD + coverage >= 80%
     - _Requirements: All requirements (CI/CD infrastructure)_
+
+  - [ ] 11.4 Implement Global Report generation
+    - Create reports/global-report.json generation
+    - Create reports/global-report.html with MUI styling
+    - Auto-open HTML after global execution
+    - Include: screens, components, contracts, BDD scenarios, coverage
+    - _Requirements: Global Report automation_
+
+  - [ ] 11.5 Integrate correlation ID with BDD and E2E
+    - Add correlationId to all BDD step executions
+    - Integrate with logger for BDD scenario tracking
+    - Add correlation to E2E test runs
+    - _Requirements: Observability correlation_
 
 - [ ] 12. Add comprehensive unit tests
   - [ ] 12.1 Create Test Data Builder pattern
@@ -275,6 +341,17 @@ This implementation plan extends the existing todo-list implementation with ente
     - Use Test Data Builder for consistent test scenarios
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
+  - [ ] 12.5 Implement Test Data Builder pattern
+    - Create src/domains/task/testing/TaskTestDataBuilder.ts
+    - Implement builders for different task states
+    - Support BDD style (given/when/then) via DSL
+    - _Requirements: Test Data Builder pattern_
+
+  - [ ] 12.6 Implement BDD style DSL for unit tests
+    - Create testing utilities with given/when/then methods
+    - Apply to all existing unit tests
+    - _Requirements: BDD style in unit tests_
+
 - [ ] 13. Create E2E tests (baseline gate only)
   - [ ] 13.1 Set up Playwright + Cucumber for E2E BDD
     - Configure Playwright with single browser (headless for CI)
@@ -296,3 +373,22 @@ This implementation plan extends the existing todo-list implementation with ente
   - Generate Global Report and open HTML automatically
   - Verify 80% minimum coverage requirement
   - Prepare for baseline creation (E2E tests run only as baseline gate)
+
+- [ ] 15. Implement CHANGE management and baseline process
+  - [ ] 15.1 Implement CHANGE management process
+    - Create changes/ directory structure
+    - Implement CHANGE analysis template
+    - Add impact analysis for BDD changes
+    - _Requirements: CHANGE management compliance_
+
+  - [ ] 15.2 Implement baseline creation process
+    - Create baseline:create script
+    - Generate baseline/manifest.json
+    - Implement Git tagging with baseline/*
+    - _Requirements: Baseline management_
+
+  - [ ] 15.3 Implement documentation generation
+    - Create docs:generate script
+    - Generate OpenAPI documentation
+    - Create HTML viewer in docs/
+    - _Requirements: Documentation automation_

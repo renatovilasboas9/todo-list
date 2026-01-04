@@ -170,14 +170,16 @@ This implementation plan extends the existing todo-list implementation with ente
     - **Property 8: State Restoration Round-Trip**
     - **Validates: Requirements 4.1, 4.2**
 
-  - [ ] 6.6 Update BDD integration with real repositories (BDD First Compliance)
+  - [x] 6.6 Update BDD integration with real repositories (BDD First Compliance)
     - Update common.steps.ts to use MemoryTaskRepository via DI
     - Modify all BDD steps to use real repository methods instead of mocks
     - Remove simulateLocalStorage() and replace with MemoryTaskRepository
     - Ensure BDD validates actual implementation behavior
+    - Fix UUID generation for proper task ID validation
+    - Update all async repository calls in BDD steps
     - _Requirements: BDD First compliance, No-Mocks Drift rule_
 
-  - [ ] 6.7 Create domain-level composition root for TEST environment
+  - [x] 6.7 Create domain-level composition root for TEST environment
     - Create src/domains/task/config/test.ts
     - Set up DI container with MemoryTaskRepository
     - Configure EventBus handlers for domain

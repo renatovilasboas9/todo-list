@@ -4,140 +4,142 @@
 
 This implementation plan extends the existing todo-list implementation with enterprise-grade practices including BDD-first development, domain-driven design, comprehensive testing, and observability infrastructure.
 
-- [ ] 1. Create BDD scenarios (BDD FIRST - Regra Mestra)
-  - [ ] 1.1 Set up domain structure and BDD framework
+- [x] 1. Create BDD scenarios (BDD FIRST - Regra Mestra)
+  - [x] 1.1 Set up domain structure and BDD framework
     - Create `src/domains/task/bdd/` directory structure
     - Set up Cucumber for BDD scenario execution
     - Configure BDD test runner with Vitest integration
     - _Requirements: All requirements (BDD foundation)_
 
-  - [ ] 1.2 Write BDD scenario for task creation (happy path)
+  - [x] 1.2 Write BDD scenario for task creation (happy path)
     - Create `task-creation.feature` with Gherkin scenarios
     - Define Given/When/Then steps for adding valid tasks
     - Include scenarios for input validation and persistence
     - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-  - [ ] 1.3 Write BDD scenario for task completion (happy path)
+  - [x] 1.3 Write BDD scenario for task completion (happy path)
     - Create `task-completion.feature` with toggle scenarios
     - Define steps for marking tasks complete/incomplete
     - Include visual feedback and persistence scenarios
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-  - [ ] 1.4 Write BDD scenario for task deletion
+  - [x] 1.4 Write BDD scenario for task deletion
     - Create `task-deletion.feature` with removal scenarios
     - Define steps for deleting tasks and maintaining list integrity
     - Include persistence and UI update scenarios
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ] 1.5 Write BDD scenario for data persistence and loading
+  - [x] 1.5 Write BDD scenario for data persistence and loading
     - Create `task-persistence.feature` with storage scenarios
     - Define steps for app restart and data restoration
     - Include error handling for corrupted data
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 1.6 Write BDD scenario for UI and validation
+  - [x] 1.6 Write BDD scenario for UI and validation
     - Create `task-ui.feature` with interface scenarios
     - Define steps for MUI components and inline validation
     - Include empty state and visual feedback scenarios
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 2. Set up project structure and core interfaces
+- [x] 2. Set up project structure and core interfaces
   - Create complete directory structure following DDD principles
   - Set up TypeScript configuration and build tools (NO JavaScript/JSX allowed)
   - Initialize Vitest testing framework with React Testing Library
   - Configure fast-check for property-based testing
   - Set up Material UI and theme configuration
   - Create folder structure: docs/, reports/, logs/, videos/, db/, temp/, changes/
-  - Create .gitignore for temp/**, db/**/*.sqlite, logs/**, videos/**
+  - Create .gitignore for temp/**, db/**/\*.sqlite, logs/**, videos/**
   - Set up CI configuration with lint, format, typecheck, unit tests, BDD
   - Configure coverage >= 80% requirement
   - _Requirements: All requirements (foundation)_
 
-- [ ] 3. Implement data contracts and validation (Zod)
-  - [ ] 3.1 Create Zod schemas in SHARED/contracts/task/v1/
+- [x] 3. Implement data contracts and validation (Zod)
+  - [x] 3.1 Create Zod schemas in SHARED/contracts/task/v1/
     - Define TaskSchema with id, description, completed, createdAt fields
     - Define StorageSchema for Local Storage format with versioning
     - Implement TypeScript type inference from Zod schemas
     - Create validation utilities for inline validation
     - _Requirements: 1.1, 1.2, 4.1, 4.2, 5.5_
 
-  - [ ] 3.2 Write property test for data model validation
+  - [x] 3.2 Write property test for data model validation
     - **Property 2: Invalid Task Rejection**
     - **Validates: Requirements 1.2**
 
-- [ ] 4. Create UI Gallery (prototipação com MUI)
-  - [ ] 4.1 Set up Gallery structure in domains/task/gallery/
+- [x] 4. Create UI Gallery (prototipação com MUI)
+  - [x] 4.1 Set up Gallery structure in domains/task/gallery/
     - Create Storybook or component gallery for prototyping
     - Configure Material UI theme and components
     - Set up in-memory data for prototyping
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ] 4.2 Design TaskInput component prototype with MUI
+  - [x] 4.2 Design TaskInput component prototype with MUI
     - Create MUI TextField and Button components
     - Design focus states and validation feedback with MUI
     - Test inline validation derived from Zod schemas
     - Demonstrate happy path and failure scenarios
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 5.5_
 
-  - [ ] 4.3 Design TaskItem component prototype with MUI
+  - [x] 4.3 Design TaskItem component prototype with MUI
     - Create MUI Checkbox, Typography, and IconButton components
     - Design completed vs active task states with MUI styling
     - Test visual feedback for hover and interaction states
     - Demonstrate completion toggle and deletion
     - _Requirements: 2.1, 2.2, 3.1_
 
-  - [ ] 4.4 Design TaskList component prototype with MUI
+  - [x] 4.4 Design TaskList component prototype with MUI
     - Create MUI List and ListItem components
     - Design empty state with MUI Typography and helpful guidance
     - Test responsive layout with MUI Grid/Container
     - Demonstrate multiple tasks and empty state
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-  - [ ] 4.5 Create complete TaskManagerApp layout with MUI
+  - [x] 4.5 Create complete TaskManagerApp layout with MUI
     - Integrate all component prototypes with MUI theme
     - Ensure consistent MUI spacing, typography, and visual hierarchy
     - Test responsive behavior and MUI breakpoints
     - Validate accessibility with MUI components
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 5. Implement shared infrastructure
-  - [ ] 5.1 Create centralized logger in SHARED/logger/
+- [x] 5. Implement shared infrastructure
+  - [x] 5.1 Create centralized logger in SHARED/logger/
     - Implement logger with correlationId support
     - Configure DEBUG mode for DEV/TEST environments
     - Set up file logging for all executions
     - Create log correlation for UI actions and operations
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ] 5.2 Create EventBus in SHARED/eventbus/
+  - [x] 5.2 Create EventBus in SHARED/eventbus/
     - Implement simple in-memory event bus
-    - Define event types: UI.TASK.*, DOMAIN.TASK.*, SYSTEM.*
+    - Define event types: UI.TASK._, DOMAIN.TASK._, SYSTEM.\*
     - Create event handlers for UI to Service communication
     - Integrate with logger for event tracking
     - _Requirements: All requirements (architectural foundation)_
-- [ ] 6. Implement repository layer
-  - [ ] 6.1 Create TaskRepository interface in domains/task/repositories/
+
+- [x] 6. Implement repository layer
+  - [x] 6.1 Create TaskRepository interface in domains/task/repositories/
     - Define abstract interface for task storage operations
     - Specify methods: findAll, save, delete, clear
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 6.2 Implement MemoryTaskRepository for TEST environment
+  - [x] 6.2 Implement MemoryTaskRepository for TEST environment
     - Create in-memory implementation for testing
     - Implement all repository methods with array storage
     - Add data validation and error simulation capabilities
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 6.3 Implement LocalStorageTaskRepository for PROD environment
+  - [x] 6.3 Implement LocalStorageTaskRepository for PROD environment
     - Implement concrete repository using browser Local Storage
     - Handle serialization/deserialization with Zod validation
     - Implement error handling for corrupted data and storage quota
     - Integrate with centralized logger for operations
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 6.4 Write property test for state persistence
+  - [x] 6.4 Write property test for state persistence
     - **Property 7: State Persistence Synchronization**
     - **Validates: Requirements 1.4, 2.3, 3.2, 4.4**
 
-  - [ ] 6.5 Write property test for state restoration
+  - [x] 6.5 Write property test for state restoration
     - **Property 8: State Restoration Round-Trip**
     - **Validates: Requirements 4.1, 4.2**
 

@@ -1,0 +1,2 @@
+# Event Bus
+# This directory will contain the in-memory event bus for pub/sub communication

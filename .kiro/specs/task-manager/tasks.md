@@ -6,17 +6,24 @@ This implementation plan extends the existing todo-list implementation with ente
 
 ## 🔧 **COMPLIANCE UPDATES (Based on Global Rules Analysis)**
 
+**⚠️ CRITICAL COMPLIANCE ISSUE IDENTIFIED:**
+The BDD steps are currently NOT using the official Zod contracts from `src/SHARED/contracts/task/v1/`, which violates Rule 02-contracts-zod.md. This is a mandatory requirement that states:
+- MUST BDD/steps import and use official Zod schemas from SHARED/contracts
+- MUST use inferred types from Zod
+- MUST NOT have duplicate types/DTOs when official contracts exist
+
 **CRITICAL FIXES (BDD First & Architecture Compliance):**
-- **6.6**: BDD integration with real repositories (No-Mocks Drift rule)
-- **6.7**: Domain-level composition root for TEST environment
-- **9.8**: EventBus integration with UI components (Event-driven frontend)
+- [x] **6.6**: BDD integration with real repositories (BDD First Compliance)
+- [x] **6.7**: Domain-level composition root for TEST environment
+- [ ] **6.8**: BDD steps contract compliance (CRITICAL - Rule 02-contracts-zod.md) **← NEXT PRIORITY**
+- [ ] **9.8**: EventBus integration with UI components (Event-driven frontend)
 
 **ARCHITECTURE COMPLETIONS:**
-- **4.6**: Gallery Index integration (Gallery rule)
-- **10.2**: Environment-specific config files (DI configuration)
-- **11.4**: Global Report generation (Observability)
-- **12.5**: Test Data Builder pattern (Testing standards)
-- **12.6**: BDD style DSL for unit tests (Testing standards)
+- [x] **4.6**: Gallery Index integration (Gallery rule)
+- [ ] **10.2**: Environment-specific config files (DI configuration)
+- [ ] **11.4**: Global Report generation (Observability)
+- [ ] **12.5**: Test Data Builder pattern (Testing standards)
+- [ ] **12.6**: BDD style DSL for unit tests (Testing standards)
 
 **GOVERNANCE & PROCESS:**
 - **11.5**: Correlation ID integration with BDD/E2E
@@ -122,7 +129,7 @@ This implementation plan extends the existing todo-list implementation with ente
     - Validate accessibility with MUI components
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ] 4.6 Integrate all UI components to Gallery Index
+  - [x] 4.6 Integrate all UI components to Gallery Index
     - Update gallery/gallery.tsx to include all component galleries
     - Ensure TaskManagerAppGallery is properly integrated
     - Add navigation between component galleries
@@ -185,8 +192,18 @@ This implementation plan extends the existing todo-list implementation with ente
     - Configure EventBus handlers for domain
     - _Requirements: Architecture compliance, DI pattern_
 
-- [ ] 7. Implement service layer in domains/task/services/
-  - [ ] 7.1 Create TaskService with business logic
+  - [x] 6.8 Update BDD steps to use official Zod contracts (CRITICAL COMPLIANCE)
+    - Import and use official Zod schemas from src/SHARED/contracts/task/v1/
+    - Replace manual validation with TaskSchema.parse() and validation utilities
+    - Use inferred TypeScript types from Zod schemas instead of manual types
+    - Replace BDDAssertions with official contract validation functions
+    - Update all step files: common.steps.ts, task-creation.steps.ts, task-completion.steps.ts, task-deletion.steps.ts, task-persistence.steps.ts
+    - Update bdd.config.ts to use official Zod contracts instead of manual BDDAssertions
+    - Ensure NO duplicate types/DTOs when official contracts exist
+    - _Requirements: Rule 02-contracts-zod.md compliance, BDD First rule_
+
+- [x] 7. Implement service layer in domains/task/services/
+  - [x] 7.1 Create TaskService with business logic
     - Implement createTask method with GUID generation
     - Implement toggleTask method for completion status changes
     - Implement deleteTask method with validation
@@ -195,23 +212,23 @@ This implementation plan extends the existing todo-list implementation with ente
     - Integrate with centralized logger and EventBus
     - _Requirements: 1.1, 1.2, 2.1, 2.4, 3.1_
 
-  - [ ] 7.2 Write property test for task addition
+  - [x] 7.2 Write property test for task addition
     - **Property 1: Task Addition Grows List**
     - **Validates: Requirements 1.1**
 
-  - [ ] 7.3 Write property test for task toggle
+  - [x] 7.3 Write property test for task toggle
     - **Property 4: Task Toggle Round-Trip**
     - **Validates: Requirements 2.1, 2.4**
 
-  - [ ] 7.4 Write property test for task deletion
+  - [x] 7.4 Write property test for task deletion
     - **Property 6: Task Deletion Removes Item**
     - **Validates: Requirements 3.1, 3.3**
 
-- [ ] 8. Checkpoint - Ensure all tests pass
+- [x] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Implement UI components in domains/task/components/ with MUI
-  - [ ] 9.1 Create TaskInput component with Material UI
+  - [x] 9.1 Create TaskInput component with Material UI
     - Implement MUI TextField with validation
     - Add MUI Button and Enter key handling
     - Implement input clearing and focus management
@@ -219,48 +236,48 @@ This implementation plan extends the existing todo-list implementation with ente
     - Add inline validation derived from Zod schemas
     - _Requirements: 1.1, 1.2, 1.3, 5.5_
 
-  - [ ] 9.2 Write property test for input field behavior
+  - [x] 9.2 Write property test for input field behavior
     - **Property 3: Input Field Reset**
     - **Validates: Requirements 1.3**
 
-  - [ ] 9.3 Create TaskItem component with Material UI
+  - [x] 9.3 Create TaskItem component with Material UI
     - Implement MUI Checkbox for completion toggle
     - Use MUI Typography for task description
     - Add MUI IconButton for delete with confirmation
     - Handle completion visual styling with MUI theme
     - _Requirements: 2.1, 2.2, 3.1_
 
-  - [ ] 9.4 Write property test for task rendering
+  - [x] 9.4 Write property test for task rendering
     - **Property 9: Task Rendering Completeness**
     - **Validates: Requirements 5.2**
 
-  - [ ] 9.5 Write property test for completion visual indication
+  - [x] 9.5 Write property test for completion visual indication
     - **Property 5: Completion Visual Indication**
     - **Validates: Requirements 2.2**
 
-  - [ ] 9.6 Create TaskList component with Material UI
+  - [x] 9.6 Create TaskList component with Material UI
     - Implement MUI List container with proper styling
     - Add empty state with MUI Typography guidance
     - Handle task ordering and responsive layout
     - Connect to EventBus for task operations
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-  - [ ] 9.7 Create main TaskManagerApp component with MUI
+  - [x] 9.7 Create main TaskManagerApp component with MUI
     - Integrate all child components with MUI theme
     - Set up EventBus connections and error boundaries
     - Initialize application state from storage
     - Handle application-level logging and correlation
     - _Requirements: All requirements (integration)_
 
-  - [ ] 9.8 Integrate EventBus with UI components
+  - [x] 9.8 Integrate EventBus with UI components
     - Connect TaskInput to EventBus for task creation events
     - Connect TaskItem to EventBus for toggle/delete events
     - Connect TaskList to EventBus for state updates
     - Implement UI.TASK.*, DOMAIN.TASK.* event types
     - _Requirements: Event-driven frontend architecture_
 
-- [ ] 10. Implement composition root and dependency injection
-  - [ ] 10.1 Create application composition root in config/
+- [x] 10. Implement composition root and dependency injection
+  - [x] 10.1 Create application composition root in config/
     - Set up dependency injection for services and repositories
     - Configure TEST environment (MemoryRepository)
     - Configure PROD environment (LocalStorageRepository)
@@ -268,7 +285,7 @@ This implementation plan extends the existing todo-list implementation with ente
     - Set up centralized logger configuration
     - _Requirements: All requirements (architectural)_
 
-  - [ ] 10.2 Create environment-specific config files
+  - [x] 10.2 Create environment-specific config files
     - Create config/test.ts with MemoryRepository configuration
     - Create config/prod.ts with LocalStorageRepository configuration
     - Implement environment detection and switching

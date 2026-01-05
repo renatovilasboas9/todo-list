@@ -19,6 +19,15 @@ export interface TaskRepository {
     findAll(): Promise<Task[]>
 
     /**
+     * Find a task by its ID
+     * 
+     * @param id - UUID of the task to find
+     * @returns Promise resolving to the task if found, null if not found
+     * @throws Error if storage operation fails
+     */
+    findById(id: string): Promise<Task | null>
+
+    /**
      * Save a task to storage
      * 
      * For new tasks (not existing in storage), this performs an insert.

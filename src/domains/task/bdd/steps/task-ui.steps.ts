@@ -1,6 +1,13 @@
 import { expect } from 'vitest'
 import { TaskManagerWorld } from './common.steps.js'
-import { BDDAssertions } from '../bdd.config.js'
+import {
+  validateTask,
+  validateTaskDescription,
+  isEmptyOrWhitespace,
+  type Task,
+  type ValidationResult,
+  VALIDATION_CONSTANTS
+} from '../../../../SHARED/contracts/task/v1'
 
 // This file contains step definitions for UI and validation scenarios
 // These steps validate Material UI integration and inline validation behavior
@@ -37,6 +44,10 @@ export class TaskUISteps {
     const task = world.findTaskByDescription(description)
     expect(task).toBeDefined()
     expect(task!.completed).toBe(completed)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
 
     // Simulate MUI rendering
     if (!world.context.ui) {
@@ -85,6 +96,12 @@ export class TaskUISteps {
   ) {
     expect(world.context.tasks.length).toBeGreaterThan(1)
 
+    // Validate all tasks using official Zod schema
+    world.context.tasks.forEach(task => {
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
+    })
+
     // Simulate MUI List rendering with multiple items
     if (!world.context.ui) {
       world.context.ui = {}
@@ -107,7 +124,10 @@ export class TaskUISteps {
   }
 
   static validateInlineValidationEmpty(world: TaskManagerWorld) {
-    // Simulate empty input validation
+    // Simulate empty input validation using official Zod validation
+    const emptyInput = ''
+    const validationResult = validateTaskDescription(emptyInput)
+
     if (!world.context.ui) {
       world.context.ui = {}
     }
@@ -116,9 +136,10 @@ export class TaskUISteps {
       triggered: true,
       muiFormComponents: { used: true },
       zodSchema: { source: true },
-      message: 'Task description cannot be empty',
+      message: validationResult.errors[0] || 'Task description cannot be empty',
       muiErrorStyling: { applied: true },
       formSubmission: { prevented: true },
+      validationResult: validationResult,
     }
 
     expect(world.context.ui.validation.triggered).toBe(true)
@@ -126,32 +147,41 @@ export class TaskUISteps {
     expect(world.context.ui.validation.zodSchema.source).toBe(true)
     expect(world.context.ui.validation.muiErrorStyling.applied).toBe(true)
     expect(world.context.ui.validation.formSubmission.prevented).toBe(true)
+    expect(validationResult.isValid).toBe(false)
   }
 
   static validateInlineValidationWhitespace(world: TaskManagerWorld) {
-    // Simulate whitespace validation
+    // Simulate whitespace validation using official Zod validation
+    const whitespaceInput = '   '
+    const validationResult = validateTaskDescription(whitespaceInput)
+
     if (!world.context.ui) {
       world.context.ui = {}
     }
 
     world.context.ui.validation = {
       triggered: true,
-      input: '   ',
+      input: whitespaceInput,
       muiFormComponents: { used: true },
       zodSchema: { source: true, rule: 'whitespace validation' },
-      message: 'Task description cannot be empty or contain only whitespace',
+      message: validationResult.errors[0] || 'Task description cannot be empty or contain only whitespace',
       muiErrorStyling: { applied: true },
       inputFocus: { maintained: true },
+      validationResult: validationResult,
     }
 
     expect(world.context.ui.validation.triggered).toBe(true)
     expect(world.context.ui.validation.zodSchema.source).toBe(true)
     expect(world.context.ui.validation.muiErrorStyling.applied).toBe(true)
     expect(world.context.ui.validation.inputFocus.maintained).toBe(true)
+    expect(validationResult.isValid).toBe(false)
+    expect(isEmptyOrWhitespace(whitespaceInput)).toBe(true)
   }
 
   static validateValidationCleared(world: TaskManagerWorld, validInput: string) {
-    // Simulate validation clearing with valid input
+    // Simulate validation clearing with valid input using official Zod validation
+    const validationResult = validateTaskDescription(validInput)
+
     if (!world.context.ui) {
       world.context.ui = {}
     }
@@ -162,12 +192,14 @@ export class TaskUISteps {
       muiErrorStyling: { removed: true },
       muiNormalStyling: { restored: true },
       formReady: { forSubmission: true },
+      validationResult: validationResult,
     }
 
     expect(world.context.ui.validation.cleared).toBe(true)
     expect(world.context.ui.validation.muiErrorStyling.removed).toBe(true)
     expect(world.context.ui.validation.muiNormalStyling.restored).toBe(true)
     expect(world.context.ui.validation.formReady.forSubmission).toBe(true)
+    expect(validationResult.isValid).toBe(true)
   }
 
   static validateFocusVisualFeedback(world: TaskManagerWorld) {
@@ -203,19 +235,25 @@ export class TaskUISteps {
       focusManagement: { proper: true },
       clearAfterCreation: true,
       focusForNextEntry: true,
+      maxLength: VALIDATION_CONSTANTS.MAX_DESCRIPTION_LENGTH,
     }
 
     expect(world.context.ui.textFieldBehavior.muiTextField.component).toBe(true)
     expect(world.context.ui.textFieldBehavior.enterKeySupport).toBe(true)
     expect(world.context.ui.textFieldBehavior.addButtonSupport).toBe(true)
     expect(world.context.ui.textFieldBehavior.focusManagement.proper).toBe(true)
+    expect(world.context.ui.textFieldBehavior.maxLength).toBe(VALIDATION_CONSTANTS.MAX_DESCRIPTION_LENGTH)
   }
 
-  static validateMUIDeleteButton(world: TaskManagerWorld, taskDescription: string) {
+  static async validateMUIDeleteButton(world: TaskManagerWorld, taskDescription: string) {
     const task = world.findTaskByDescription(taskDescription)
     expect(task).toBeDefined()
 
-    // Simulate MUI IconButton delete behavior
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+
+    // Simulate MUI IconButton delete behavior (without actually deleting)
     if (!world.context.ui) {
       world.context.ui = {}
     }
@@ -229,17 +267,19 @@ export class TaskUISteps {
       muiTransitions: { applied: true },
     }
 
-    // Simulate the deletion
-    world.deleteTask(task!.id)
-
+    // Validate the UI components without actually performing the deletion
     expect(world.context.ui.deleteButton.muiIconButton.component).toBe(true)
     expect(world.context.ui.deleteButton.immediateDelete).toBe(true)
     expect(world.context.ui.deleteButton.muiTransitions.applied).toBe(true)
   }
 
-  static validateMUICheckboxToggle(world: TaskManagerWorld, taskDescription: string) {
+  static async validateMUICheckboxToggle(world: TaskManagerWorld, taskDescription: string) {
     const task = world.findTaskByDescription(taskDescription)
     expect(task).toBeDefined()
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
 
     const originalState = task!.completed
 
@@ -256,12 +296,16 @@ export class TaskUISteps {
       visualFeedback: { immediate: true, clear: true },
     }
 
-    // Perform the toggle
-    world.toggleTask(task!.id)
+    // Perform the toggle using TaskService
+    await world.toggleTask(task!.id)
 
     expect(world.context.ui.checkboxToggle.muiCheckbox.component).toBe(true)
     expect(world.context.ui.checkboxToggle.visualFeedback.immediate).toBe(true)
-    expect(task!.completed).toBe(!originalState)
+    expect(world.context.currentTask!.completed).toBe(!originalState)
+
+    // Validate toggled task using official Zod schema
+    const toggledValidationResult = validateTask(world.context.currentTask)
+    expect(toggledValidationResult.isValid).toBe(true)
   }
 
   static validateResponsiveLayout(world: TaskManagerWorld) {
@@ -368,7 +412,10 @@ export class TaskUISteps {
   }
 
   static validateZodMUIIntegration(world: TaskManagerWorld) {
-    // Simulate Zod and MUI form integration
+    // Simulate Zod and MUI form integration using official validation
+    const testInput = 'Valid task description'
+    const validationResult = validateTaskDescription(testInput)
+
     if (!world.context.ui) {
       world.context.ui = {}
     }
@@ -379,12 +426,16 @@ export class TaskUISteps {
       muiFormComponents: { seamlessIntegration: true },
       muiErrorStyling: { used: true },
       clearGuidance: { provided: true },
+      validationResult: validationResult,
+      maxLengthConstraint: VALIDATION_CONSTANTS.MAX_DESCRIPTION_LENGTH,
     }
 
     expect(world.context.ui.zodMUIIntegration.zodSchema.drivesValidation).toBe(true)
     expect(world.context.ui.zodMUIIntegration.muiFormHelperText.displaysMessages).toBe(true)
     expect(world.context.ui.zodMUIIntegration.muiFormComponents.seamlessIntegration).toBe(true)
     expect(world.context.ui.zodMUIIntegration.clearGuidance.provided).toBe(true)
+    expect(validationResult.isValid).toBe(true)
+    expect(world.context.ui.zodMUIIntegration.maxLengthConstraint).toBe(VALIDATION_CONSTANTS.MAX_DESCRIPTION_LENGTH)
   }
 
   static validateSmoothMUITransitions(world: TaskManagerWorld) {

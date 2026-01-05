@@ -19,7 +19,7 @@ describe('BDD Framework', () => {
     expect(existsSync(join(stepsPath, 'common.steps.ts'))).toBe(true)
   })
 
-  it('should validate task creation scenarios', () => {
+  it('should validate task creation scenarios', async () => {
     const bddPath = join(process.cwd(), 'src/domains/task/bdd')
     const featureFiles = readdirSync(bddPath).filter((file) => file.endsWith('.feature'))
 
@@ -38,7 +38,7 @@ describe('BDD Framework', () => {
     expect(world.context.tasks).toHaveLength(0)
 
     // When I enter "Buy groceries" and submit
-    TaskCreationSteps.validateTaskCreation(world, 'Buy groceries')
+    await TaskCreationSteps.validateTaskCreation(world, 'Buy groceries')
 
     // Then validate all expected outcomes
     TaskCreationSteps.validateTaskCreated(world, 'Buy groceries')
@@ -51,14 +51,14 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Successfully add a valid task - PASSED')
   })
 
-  it('should validate task creation rejection scenarios', () => {
+  it('should validate task creation rejection scenarios', async () => {
     const world = new TaskManagerWorld()
 
     // Test Scenario: Reject empty task description
     world.resetContext()
 
     // When I enter empty string and submit
-    TaskCreationSteps.validateTaskCreation(world, '')
+    await TaskCreationSteps.validateTaskCreation(world, '')
 
     // Then validate rejection
     TaskCreationSteps.validateNoTaskCreated(world)
@@ -71,7 +71,7 @@ describe('BDD Framework', () => {
     world.resetContext()
 
     // When I enter whitespace and submit
-    TaskCreationSteps.validateTaskCreation(world, '   ')
+    await TaskCreationSteps.validateTaskCreation(world, '   ')
 
     // Then validate rejection
     TaskCreationSteps.validateNoTaskCreated(world)
@@ -81,14 +81,14 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Reject whitespace-only task description - PASSED')
   })
 
-  it('should validate multiple task creation scenarios', () => {
+  it('should validate multiple task creation scenarios', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Successfully add multiple tasks
-    TaskCreationSteps.validateTaskCreation(world, 'Buy groceries')
-    TaskCreationSteps.validateTaskCreation(world, 'Complete project documentation')
-    TaskCreationSteps.validateTaskCreation(world, 'Schedule dentist appointment')
+    await TaskCreationSteps.validateTaskCreation(world, 'Buy groceries')
+    await TaskCreationSteps.validateTaskCreation(world, 'Complete project documentation')
+    await TaskCreationSteps.validateTaskCreation(world, 'Schedule dentist appointment')
 
     // Then validate multiple tasks
     TaskCreationSteps.validateTaskCount(world, 3)
@@ -98,12 +98,12 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Successfully add multiple tasks - PASSED')
   })
 
-  it('should validate task trimming scenarios', () => {
+  it('should validate task trimming scenarios', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Accept task with leading and trailing spaces (trimmed)
-    TaskCreationSteps.validateTaskCreation(world, '  Buy groceries  ')
+    await TaskCreationSteps.validateTaskCreation(world, '  Buy groceries  ')
 
     // Then validate trimming
     TaskCreationSteps.validateTaskCreated(world, 'Buy groceries')
@@ -112,15 +112,15 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Accept task with leading and trailing spaces (trimmed) - PASSED')
   })
 
-  it('should validate task completion scenarios', () => {
+  it('should validate task completion scenarios', async () => {
     const world = new TaskManagerWorld()
 
     // Test Scenario: Toggle task completion status via checkbox
     world.resetContext()
-    const task = TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
+    const task = await TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
 
     // When I click on the task checkbox
-    TaskCompletionSteps.clickTaskCheckbox(world)
+    await TaskCompletionSteps.clickTaskCheckbox(world)
 
     // Then validate completion toggle
     TaskCompletionSteps.validateTaskToggled(world, true)
@@ -131,10 +131,10 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Toggle task completion status via checkbox - PASSED')
 
     // Test Scenario: Toggle completed task back to active
-    TaskCompletionSteps.setupCompletedTask(world, 'Buy groceries')
+    await TaskCompletionSteps.setupCompletedTask(world, 'Buy groceries')
 
     // When I click on the task checkbox again
-    TaskCompletionSteps.clickTaskCheckbox(world)
+    await TaskCompletionSteps.clickTaskCheckbox(world)
 
     // Then validate toggle back to active
     TaskCompletionSteps.validateTaskToggled(world, false)
@@ -145,16 +145,16 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Toggle completed task back to active - PASSED')
   })
 
-  it('should validate task completion round-trip scenarios', () => {
+  it('should validate task completion round-trip scenarios', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Task completion round-trip consistency
-    const task = TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
+    const task = await TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
     const originalState = task.completed
 
     // When I toggle the task completion twice
-    TaskCompletionSteps.toggleTaskTwice(world)
+    await TaskCompletionSteps.toggleTaskTwice(world)
 
     // Then validate round-trip consistency
     TaskCompletionSteps.validateRoundTripConsistency(world, originalState)
@@ -163,7 +163,7 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Task completion round-trip consistency - PASSED')
   })
 
-  it('should validate multiple task completion scenarios', () => {
+  it('should validate multiple task completion scenarios', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
@@ -173,11 +173,11 @@ describe('BDD Framework', () => {
       { description: 'Complete documentation', completed: false },
       { description: 'Schedule appointment', completed: false },
     ]
-    TaskCompletionSteps.setupMultipleTasks(world, tasksData)
+    await TaskCompletionSteps.setupMultipleTasks(world, tasksData)
 
     // When I mark specific tasks as completed
-    TaskCompletionSteps.clickTaskCheckbox(world, 'Buy groceries')
-    TaskCompletionSteps.clickTaskCheckbox(world, 'Schedule appointment')
+    await TaskCompletionSteps.clickTaskCheckbox(world, 'Buy groceries')
+    await TaskCompletionSteps.clickTaskCheckbox(world, 'Schedule appointment')
 
     // Then validate multiple completion states
     TaskCompletionSteps.validateMultipleTaskStates(world, [
@@ -191,13 +191,13 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Multiple task completion states - PASSED')
   })
 
-  it('should validate task completion persistence and restoration', () => {
+  it('should validate task completion persistence and restoration', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Completion state restoration from storage
-    TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
-    TaskCompletionSteps.clickTaskCheckbox(world) // Mark as completed
+    await TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
+    await TaskCompletionSteps.clickTaskCheckbox(world) // Mark as completed
 
     // When the application is restarted
     TaskCompletionSteps.simulateApplicationRestart(world)
@@ -208,21 +208,21 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Completion state restoration from storage - PASSED')
   })
 
-  it('should validate task property preservation during completion', () => {
+  it('should validate task property preservation during completion', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Completion toggle preserves other task properties
-    const task = TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
+    const task = await TaskCompletionSteps.setupTaskForCompletion(world, 'Buy groceries')
     const originalProperties = {
       id: task.id,
       description: task.description,
-      createdAt: task.createdAt.toISOString(),
+      createdAt: task.createdAt,
       completed: task.completed,
     }
 
     // When I toggle the task completion status
-    TaskCompletionSteps.clickTaskCheckbox(world)
+    await TaskCompletionSteps.clickTaskCheckbox(world)
 
     // Then validate property preservation
     TaskCompletionSteps.validateTaskPropertiesPreserved(world, originalProperties)
@@ -230,15 +230,15 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Completion toggle preserves other task properties - PASSED')
   })
 
-  it('should validate task deletion scenarios', () => {
+  it('should validate task deletion scenarios', async () => {
     const world = new TaskManagerWorld()
 
     // Test Scenario: Successfully delete a task from the list
     world.resetContext()
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
     // When I click the delete button for task "Buy groceries"
-    TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
 
     // Then validate deletion
     TaskDeletionSteps.validateTaskRemoved(world, 'Buy groceries')
@@ -255,10 +255,10 @@ describe('BDD Framework', () => {
       { description: 'Complete documentation', completed: true },
       { description: 'Schedule appointment', completed: false },
     ]
-    TaskDeletionSteps.setupTasksWithSpecificOrder(world, tasksData)
+    await TaskDeletionSteps.setupTasksWithSpecificOrder(world, tasksData)
 
     // When I delete the middle task
-    TaskDeletionSteps.clickDeleteButton(world, 'Complete documentation')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Complete documentation')
 
     // Then validate list integrity
     TaskDeletionSteps.validateTaskCount(world, 2)
@@ -272,14 +272,14 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Delete task maintains list integrity - PASSED')
   })
 
-  it('should validate positional task deletion scenarios', () => {
+  it('should validate positional task deletion scenarios', async () => {
     const world = new TaskManagerWorld()
 
     // Test Scenario: Delete first task in list
     world.resetContext()
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
-    TaskDeletionSteps.deleteFirstTask(world)
+    await TaskDeletionSteps.deleteFirstTask(world)
 
     TaskDeletionSteps.validateTaskCount(world, 2)
     TaskDeletionSteps.validateSecondTaskBecomesFirst(world)
@@ -289,9 +289,9 @@ describe('BDD Framework', () => {
 
     // Test Scenario: Delete last task in list
     world.resetContext()
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
-    TaskDeletionSteps.deleteLastTask(world)
+    await TaskDeletionSteps.deleteLastTask(world)
 
     TaskDeletionSteps.validateTaskCount(world, 2)
     TaskDeletionSteps.validatePreviousTasksUnchanged(world)
@@ -301,9 +301,9 @@ describe('BDD Framework', () => {
 
     // Test Scenario: Delete middle task in list
     world.resetContext()
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
-    TaskDeletionSteps.deleteMiddleTask(world)
+    await TaskDeletionSteps.deleteMiddleTask(world)
 
     TaskDeletionSteps.validateTaskCount(world, 2)
     TaskDeletionSteps.validateFirstAndLastTasksUnchanged(world)
@@ -312,22 +312,21 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Delete middle task in list - PASSED')
   })
 
-  it('should validate task deletion with completion states', () => {
+  it('should validate task deletion with completion states', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Delete completed task
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
     // Mark one task as completed
     const task = world.findTaskByDescription('Complete project documentation')
     if (task) {
-      task.completed = true
-      world.simulateStorageRestore(world.context.tasks)
+      await world.toggleTask(task.id)
     }
 
     // When I delete the completed task
-    TaskDeletionSteps.clickDeleteButton(world, 'Complete project documentation')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Complete project documentation')
 
     // Then validate deletion with completion state preservation
     TaskDeletionSteps.validateTaskRemoved(world, 'Complete project documentation')
@@ -338,36 +337,44 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Delete completed task - PASSED')
   })
 
-  it('should validate task deletion with unique identifiers', () => {
+  it('should validate task deletion with unique identifiers', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Delete task with unique identifier preservation
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
-    TaskDeletionSteps.setupTaskWithSpecificId(world, 'Buy groceries', 'task-123')
-    TaskDeletionSteps.setupTaskWithSpecificId(world, 'Schedule dentist appointment', 'task-456')
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
-    // When I delete the task with id "task-123"
-    TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
+    // Get the actual task IDs after creation
+    const buyGroceriesTask = world.findTaskByDescription('Buy groceries')
+    const scheduleTask = world.findTaskByDescription('Schedule dentist appointment')
+
+    expect(buyGroceriesTask).toBeDefined()
+    expect(scheduleTask).toBeDefined()
+
+    const taskIdToDelete = buyGroceriesTask!.id
+    const taskIdToKeep = scheduleTask!.id
+
+    // When I delete the task with the specific ID
+    await TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
 
     // Then validate unique identifier handling
-    TaskDeletionSteps.validateTaskWithIdNotExists(world, 'task-123')
-    TaskDeletionSteps.validateTaskWithIdExists(world, 'task-456')
-    TaskDeletionSteps.validateTaskPropertiesPreserved(world, 'task-456')
+    TaskDeletionSteps.validateTaskWithIdNotExists(world, taskIdToDelete)
+    TaskDeletionSteps.validateTaskWithIdExists(world, taskIdToKeep)
+    TaskDeletionSteps.validateTaskPropertiesPreserved(world, taskIdToKeep)
     TaskDeletionSteps.validateDeletionPersisted(world)
 
     console.log('✓ Scenario: Delete task with unique identifier preservation - PASSED')
   })
 
-  it('should validate single task deletion and empty state', () => {
+  it('should validate single task deletion and empty state', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Delete single remaining task
-    TaskDeletionSteps.setupSingleTask(world, 'Buy groceries')
+    await TaskDeletionSteps.setupSingleTask(world, 'Buy groceries')
 
     // When I delete the only task
-    TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
 
     // Then validate empty state
     TaskDeletionSteps.validateEmptyTaskList(world)
@@ -377,16 +384,16 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Delete single remaining task - PASSED')
   })
 
-  it('should validate invalid deletion scenarios', () => {
+  it('should validate invalid deletion scenarios', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Attempt to delete non-existent task
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
     const originalCount = world.context.tasks.length
 
     // When I attempt to delete a non-existent task
-    TaskDeletionSteps.attemptDeleteNonExistentTask(world, 'non-existent-task')
+    await TaskDeletionSteps.attemptDeleteNonExistentTask(world, 'non-existent-task')
 
     // Then validate no changes
     TaskDeletionSteps.validateTaskListUnchanged(world, originalCount)
@@ -395,15 +402,15 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Attempt to delete non-existent task - PASSED')
   })
 
-  it('should validate task deletion storage scenarios', () => {
+  it('should validate task deletion storage scenarios', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Delete task and verify storage format
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
     // When I delete a task
-    TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
 
     // Then validate storage format and content
     TaskDeletionSteps.validateStorageFormat(world)
@@ -413,40 +420,50 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Delete task and verify storage format - PASSED')
   })
 
-  it('should validate task deletion with timestamp preservation', () => {
+  it('should validate task deletion with timestamp preservation', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
-    // Test Scenario: Delete task preserves creation timestamps
-    const tasksData = [
+    // Test Scenario: Delete task preserves creation timestamps of remaining tasks
+    await TaskDeletionSteps.setupTasksWithTimestamps(world, [
       { description: 'Buy groceries', createdAt: '2024-01-01T10:00:00.000Z' },
       { description: 'Complete documentation', createdAt: '2024-01-01T11:00:00.000Z' },
       { description: 'Schedule appointment', createdAt: '2024-01-01T12:00:00.000Z' },
+    ])
+
+    // Get the actual timestamps after creation (they will be current timestamps)
+    const remainingTasks = [
+      world.findTaskByDescription('Buy groceries'),
+      world.findTaskByDescription('Schedule appointment'),
     ]
-    TaskDeletionSteps.setupTasksWithTimestamps(world, tasksData)
+
+    expect(remainingTasks[0]).toBeDefined()
+    expect(remainingTasks[1]).toBeDefined()
+
+    const expectedTimestamps = [
+      { description: 'Buy groceries', createdAt: remainingTasks[0]!.createdAt.toISOString() },
+      { description: 'Schedule appointment', createdAt: remainingTasks[1]!.createdAt.toISOString() },
+    ]
 
     // When I delete the middle task
-    TaskDeletionSteps.clickDeleteButton(world, 'Complete documentation')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Complete documentation')
 
     // Then validate timestamp preservation
-    TaskDeletionSteps.validateTimestampsPreserved(world, [
-      { description: 'Buy groceries', createdAt: '2024-01-01T10:00:00.000Z' },
-      { description: 'Schedule appointment', createdAt: '2024-01-01T12:00:00.000Z' },
-    ])
+    TaskDeletionSteps.validateTimestampsPreserved(world, expectedTimestamps)
     TaskDeletionSteps.validateTimestampsInStorage(world)
 
     console.log('✓ Scenario: Delete task preserves creation timestamps - PASSED')
   })
 
-  it('should validate multiple consecutive deletions', () => {
+  it('should validate multiple consecutive deletions', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Multiple consecutive deletions
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
     // When I delete multiple tasks consecutively
-    TaskDeletionSteps.performMultipleDeletions(world, [
+    await TaskDeletionSteps.performMultipleDeletions(world, [
       'Buy groceries',
       'Complete project documentation',
     ])
@@ -460,15 +477,15 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Multiple consecutive deletions - PASSED')
   })
 
-  it('should validate task deletion UI updates', () => {
+  it('should validate task deletion UI updates', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Delete task and verify UI updates
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
     // When I delete a task
-    TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
 
     // Then validate UI updates
     TaskDeletionSteps.validateUIUpdates(world)
@@ -478,15 +495,15 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Delete task and verify UI updates - PASSED')
   })
 
-  it('should validate immediate persistence after task deletion', () => {
+  it('should validate immediate persistence after task deletion', async () => {
     const world = new TaskManagerWorld()
     world.resetContext()
 
     // Test Scenario: Immediate persistence after task deletion
-    TaskDeletionSteps.setupMultipleTasksForDeletion(world)
+    await TaskDeletionSteps.setupMultipleTasksForDeletion(world)
 
     // When I delete a task
-    TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
+    await TaskDeletionSteps.clickDeleteButton(world, 'Buy groceries')
 
     // Then validate immediate persistence
     TaskDeletionSteps.validateStorageTaskCount(world, 2)
@@ -496,7 +513,7 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Immediate persistence after task deletion - PASSED')
   })
 
-  it('should validate Material UI interface scenarios', () => {
+  it('should validate Material UI interface scenarios', async () => {
     const world = new TaskManagerWorld()
 
     // Test Scenario: Display clean Material UI interface on application load
@@ -509,7 +526,7 @@ describe('BDD Framework', () => {
 
     // Test Scenario: Display task with description and completion status using MUI components
     world.resetContext()
-    world.addTask('Buy groceries')
+    await world.addTask('Buy groceries')
 
     TaskUISteps.validateTaskDisplayWithMUI(world, 'Buy groceries', false)
 
@@ -519,15 +536,15 @@ describe('BDD Framework', () => {
 
     // Test Scenario: Display completed task with proper MUI styling
     world.resetContext()
-    const task = world.addTask('Buy groceries')
-    task.completed = true
+    const task = await world.addTask('Buy groceries')
+    await world.toggleTask(task.id)
 
     TaskUISteps.validateTaskDisplayWithMUI(world, 'Buy groceries', true)
 
     console.log('✓ Scenario: Display completed task with proper MUI styling - PASSED')
   })
 
-  it('should validate Material UI empty state and list scenarios', () => {
+  it('should validate Material UI empty state and list scenarios', async () => {
     const world = new TaskManagerWorld()
 
     // Test Scenario: Display helpful guidance when task list is empty
@@ -545,10 +562,13 @@ describe('BDD Framework', () => {
       { description: 'Schedule appointment', completed: false },
     ]
 
-    tasksData.forEach((taskData) => {
-      const task = world.addTask(taskData.description)
-      task.completed = taskData.completed
-    })
+    // Create tasks properly using async operations
+    for (const taskData of tasksData) {
+      const task = await world.addTask(taskData.description)
+      if (taskData.completed) {
+        await world.toggleTask(task.id)
+      }
+    }
 
     TaskUISteps.validateMultipleTasksMUIList(world, tasksData)
 
@@ -589,7 +609,7 @@ describe('BDD Framework', () => {
     console.log('✓ Scenario: Form validation integration with Zod and MUI - PASSED')
   })
 
-  it('should validate MUI component interaction scenarios', () => {
+  it('should validate MUI component interaction scenarios', async () => {
     const world = new TaskManagerWorld()
 
     // Test Scenario: Provide visual feedback when input field receives focus
@@ -608,7 +628,7 @@ describe('BDD Framework', () => {
 
     // Test Scenario: Task deletion confirmation using MUI components
     world.resetContext()
-    world.addTask('Buy groceries')
+    await world.addTask('Buy groceries')
 
     TaskUISteps.validateMUIDeleteButton(world, 'Buy groceries')
 
@@ -616,7 +636,7 @@ describe('BDD Framework', () => {
 
     // Test Scenario: Task completion toggle using MUI Checkbox
     world.resetContext()
-    world.addTask('Buy groceries')
+    await world.addTask('Buy groceries')
 
     TaskUISteps.validateMUICheckboxToggle(world, 'Buy groceries')
 

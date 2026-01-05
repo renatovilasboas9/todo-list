@@ -1,13 +1,19 @@
 import { expect } from 'vitest'
 import { TaskManagerWorld } from './common.steps.js'
-import { BDDAssertions } from '../bdd.config.js'
+import {
+    validateTask,
+    parseStorageData,
+    type Task,
+    VALIDATION_CONSTANTS
+} from '../../../../SHARED/contracts/task/v1'
+import { v4 as uuidv4 } from 'uuid'
 
 // This file contains step definitions for task completion scenarios
 // For now, these are used for validation through the BDD runner test
 // In the future, these can be used with Cucumber when E2E testing is implemented
 
 export class TaskCompletionSteps {
-    static async setupTaskForCompletion(world: TaskManagerWorld, description: string) {
+    static async setupTaskForCompletion(world: TaskManagerWorld, description: string): Promise<Task> {
         // Given I have a task in the task list
         const task = await world.addTask(description)
         expect(task.completed).toBe(false) // Initially not completed
@@ -15,38 +21,44 @@ export class TaskCompletionSteps {
         return task
     }
 
-    static setupCompletedTask(world: TaskManagerWorld, description: string) {
+    static async setupCompletedTask(world: TaskManagerWorld, description: string): Promise<Task | undefined> {
         // Given the task is marked as completed
         const task = world.findTaskByDescription(description)
         if (task) {
-            task.completed = true
-            world.context.currentTask = task
-            world.simulateStorageRestore(world.context.tasks)
+            // Only toggle if the task is not already completed
+            if (!task.completed) {
+                // Use TaskService to toggle the task to completed
+                await world.toggleTask(task.id)
+                world.simulateStorageRestore(world.context.tasks)
+            }
         }
         return task
     }
 
-    static setupMultipleTasks(
+    static async setupMultipleTasks(
         world: TaskManagerWorld,
         tasksData: Array<{ description: string; completed: boolean }>
     ) {
         // Given I have multiple tasks in the task list
-        world.context.tasks = [] // Clear existing tasks
+        // Clear repository and context first
+        world.resetContext()
 
-        tasksData.forEach((taskData) => {
-            const task = {
-                id: `task-${Date.now()}-${Math.random()}`,
-                description: taskData.description,
-                completed: taskData.completed,
-                createdAt: new Date(),
+        // Create tasks through TaskService to ensure proper synchronization
+        for (const taskData of tasksData) {
+            const task = await world.addTask(taskData.description)
+
+            // If task should be completed, toggle it
+            if (taskData.completed) {
+                await world.toggleTask(task.id)
             }
-            world.context.tasks.push(task)
-        })
+        }
 
+        // Ensure context is synced with repository
+        await world.syncContextWithRepository()
         world.simulateStorageRestore(world.context.tasks)
     }
 
-    static clickTaskCheckbox(world: TaskManagerWorld, description?: string) {
+    static async clickTaskCheckbox(world: TaskManagerWorld, description?: string) {
         // When I click on the task checkbox
         let task = world.context.currentTask
 
@@ -61,12 +73,8 @@ export class TaskCompletionSteps {
             throw new Error('No current task to toggle')
         }
 
-        // Simulate checkbox click - toggle completion status
-        const wasCompleted = task.completed
-        task.completed = !task.completed
-        world.context.currentTask = task
-
-        // Simulate immediate persistence
+        // Use TaskService to toggle the task (this ensures proper validation)
+        await world.toggleTask(task.id)
         world.simulateStorageRestore(world.context.tasks)
 
         // Simulate UI state changes
@@ -75,12 +83,12 @@ export class TaskCompletionSteps {
         }
         world.context.ui.lastToggledTask = {
             id: task.id,
-            previousState: wasCompleted,
-            newState: task.completed,
+            previousState: !world.context.currentTask!.completed,
+            newState: world.context.currentTask!.completed,
         }
     }
 
-    static toggleTaskTwice(world: TaskManagerWorld) {
+    static async toggleTaskTwice(world: TaskManagerWorld) {
         // When I toggle the task completion twice
         const task = world.context.currentTask
         if (!task) {
@@ -90,20 +98,24 @@ export class TaskCompletionSteps {
         const originalState = task.completed
 
         // First toggle
-        task.completed = !task.completed
+        await world.toggleTask(task.id)
         // Second toggle
-        task.completed = !task.completed
+        await world.toggleTask(task.id)
 
         world.simulateStorageRestore(world.context.tasks)
 
         // Verify we're back to original state
-        expect(task.completed).toBe(originalState)
+        expect(world.context.currentTask!.completed).toBe(originalState)
     }
 
     static validateTaskToggled(world: TaskManagerWorld, expectedState: boolean) {
         // Then the task completion status should be toggled
         expect(world.context.currentTask).toBeDefined()
         expect(world.context.currentTask!.completed).toBe(expectedState)
+
+        // Validate task using official Zod schema
+        const validationResult = validateTask(world.context.currentTask)
+        expect(validationResult.isValid).toBe(true)
     }
 
     static validateTaskInListState(world: TaskManagerWorld, expectedState: boolean) {
@@ -117,14 +129,21 @@ export class TaskCompletionSteps {
     static validateCompletionPersisted(world: TaskManagerWorld) {
         // And the completion change should be persisted to storage immediately
         expect(world.context.storage?.data).toBeDefined()
-        const storageData = JSON.parse(world.context.storage!.data as string)
-        expect(BDDAssertions.hasValidStorageFormat(storageData)).toBe(true)
+
+        // Handle both string and object storage data
+        let storageData
+        if (typeof world.context.storage!.data === 'string') {
+            storageData = parseStorageData(world.context.storage!.data)
+        } else {
+            storageData = world.context.storage!.data
+        }
+        expect(storageData).not.toBeNull()
 
         // Find the current task in storage
         const currentTask = world.context.currentTask!
-        const taskInStorage = storageData.tasks.find((t: any) => t.id === currentTask.id)
+        const taskInStorage = storageData!.tasks.find(t => t.id === currentTask.id)
         expect(taskInStorage).toBeDefined()
-        expect(taskInStorage.completed).toBe(currentTask.completed)
+        expect(taskInStorage!.completed).toBe(currentTask.completed)
     }
 
     static validateVisualStyling(world: TaskManagerWorld, shouldShowCompleted: boolean) {
@@ -157,21 +176,32 @@ export class TaskCompletionSteps {
             const task = world.findTaskByDescription(expectedState.description)
             expect(task).toBeDefined()
             expect(task!.completed).toBe(expectedState.completed)
+
+            // Validate each task using official Zod schema
+            const validationResult = validateTask(task)
+            expect(validationResult.isValid).toBe(true)
         })
     }
 
     static validateAllStatesPersisted(world: TaskManagerWorld) {
         // And all completion states should be persisted to storage
         expect(world.context.storage?.data).toBeDefined()
-        const storageData = JSON.parse(world.context.storage!.data as string)
-        expect(BDDAssertions.hasValidStorageFormat(storageData)).toBe(true)
-        expect(storageData.tasks).toHaveLength(world.context.tasks.length)
+
+        // Handle both string and object storage data
+        let storageData
+        if (typeof world.context.storage!.data === 'string') {
+            storageData = parseStorageData(world.context.storage!.data)
+        } else {
+            storageData = world.context.storage!.data
+        }
+        expect(storageData).not.toBeNull()
+        expect(storageData!.tasks).toHaveLength(world.context.tasks.length)
 
         // Verify all tasks have correct completion states in storage
         world.context.tasks.forEach((task) => {
-            const taskInStorage = storageData.tasks.find((t: any) => t.id === task.id)
+            const taskInStorage = storageData!.tasks.find(t => t.id === task.id)
             expect(taskInStorage).toBeDefined()
-            expect(taskInStorage.completed).toBe(task.completed)
+            expect(taskInStorage!.completed).toBe(task.completed)
         })
     }
 
@@ -181,16 +211,20 @@ export class TaskCompletionSteps {
         expect(world.context.currentTask!.completed).toBe(originalState)
     }
 
-    static validateTaskPropertiesPreserved(world: TaskManagerWorld, originalProperties: any) {
+    static validateTaskPropertiesPreserved(world: TaskManagerWorld, originalProperties: Task) {
         // Then only the completed property should change
         expect(world.context.currentTask).toBeDefined()
         const task = world.context.currentTask!
 
         expect(task.id).toBe(originalProperties.id)
         expect(task.description).toBe(originalProperties.description)
-        expect(task.createdAt.toISOString()).toBe(originalProperties.createdAt)
+        expect(task.createdAt.toISOString()).toBe(originalProperties.createdAt.toISOString())
         // Only completed should have changed
         expect(task.completed).not.toBe(originalProperties.completed)
+
+        // Validate task using official Zod schema
+        const validationResult = validateTask(task)
+        expect(validationResult.isValid).toBe(true)
     }
 
     static validateTaskOrdering(world: TaskManagerWorld) {
@@ -208,10 +242,18 @@ export class TaskCompletionSteps {
     static simulateApplicationRestart(world: TaskManagerWorld) {
         // When the application is restarted and tasks are loaded from storage
         expect(world.context.storage?.data).toBeDefined()
-        const storageData = JSON.parse(world.context.storage!.data as string)
+
+        // Handle both string and object storage data
+        let storageData
+        if (typeof world.context.storage!.data === 'string') {
+            storageData = parseStorageData(world.context.storage!.data)
+        } else {
+            storageData = world.context.storage!.data
+        }
+        expect(storageData).not.toBeNull()
 
         // Simulate loading tasks from storage (like app restart)
-        world.context.tasks = storageData.tasks.map((taskData: any) => ({
+        world.context.tasks = storageData!.tasks.map((taskData) => ({
             ...taskData,
             createdAt: new Date(taskData.createdAt), // Convert back to Date object
         }))
@@ -229,6 +271,10 @@ export class TaskCompletionSteps {
         const task = world.findTaskByDescription(description)
         expect(task).toBeDefined()
         expect(task!.completed).toBe(expectedCompleted)
+
+        // Validate restored task using official Zod schema
+        const validationResult = validateTask(task)
+        expect(validationResult.isValid).toBe(true)
 
         // Simulate that visual styling is applied based on restored state
         TaskCompletionSteps.validateVisualStyling(world, expectedCompleted)

@@ -208,6 +208,46 @@ export class LocalStorageTaskRepository implements TaskRepository {
         }
     }
 
+    async findById(id: string): Promise<Task | null> {
+        const correlationId = this.logger.getCurrentCorrelationId()
+
+        this.logger.debug('Finding task by ID', {
+            operation: 'findById',
+            repository: 'LocalStorageTaskRepository',
+            taskId: id,
+            correlationId
+        })
+
+        try {
+            // Validate ID format
+            if (!id || typeof id !== 'string') {
+                throw new Error('Task ID must be a non-empty string')
+            }
+
+            const storageData = await this.loadStorageData()
+            const task = storageData.tasks.find(t => t.id === id)
+            const result = task ? { ...task } : null
+
+            this.logger.debug('Task search completed', {
+                operation: 'findById',
+                repository: 'LocalStorageTaskRepository',
+                taskId: id,
+                found: result !== null,
+                correlationId
+            })
+
+            return result
+        } catch (error) {
+            this.logger.error('Failed to find task by ID', error as Error, {
+                operation: 'findById',
+                repository: 'LocalStorageTaskRepository',
+                taskId: id,
+                correlationId
+            })
+            throw error
+        }
+    }
+
     async save(task: Task): Promise<void> {
         const correlationId = this.logger.getCurrentCorrelationId()
 

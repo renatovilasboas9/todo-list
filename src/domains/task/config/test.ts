@@ -1,6 +1,7 @@
 import { MemoryTaskRepository } from '../repositories/MemoryTaskRepository'
 import { TaskRepository } from '../repositories/TaskRepository'
-import { EventBus } from '../../../SHARED/eventbus/EventBus'
+import { TaskService } from '../services/TaskService'
+import EventBus from '../../../SHARED/eventbus/EventBus'
 import Logger from '../../../SHARED/logger/Logger'
 
 /**
@@ -8,6 +9,7 @@ import Logger from '../../../SHARED/logger/Logger'
  * 
  * Composition root for TEST environment that configures:
  * - MemoryTaskRepository for fast, isolated testing
+ * - TaskService with business logic
  * - EventBus handlers for domain events
  * - Logger configuration for test scenarios
  * 
@@ -17,6 +19,7 @@ import Logger from '../../../SHARED/logger/Logger'
 
 export interface TaskDomainConfig {
     taskRepository: TaskRepository
+    taskService: TaskService
     eventBus: EventBus
     logger: Logger
 }
@@ -30,22 +33,21 @@ export function createTaskDomainConfig(): TaskDomainConfig {
     const logger = Logger.getInstance()
     const eventBus = EventBus.getInstance()
     const taskRepository = new MemoryTaskRepository()
-
-    // Configure logger for test environment
-    logger.setLogLevel('DEBUG')
+    const taskService = new TaskService(taskRepository, eventBus, logger)
 
     logger.info('Task domain configured for TEST environment', {
         environment: 'TEST',
         repository: 'MemoryTaskRepository',
-        eventBus: 'EventBus',
-        correlationId: logger.getCurrentCorrelationId()
+        service: 'TaskService',
+        eventBus: 'EventBus'
     })
 
     // Register domain event handlers
-    setupDomainEventHandlers(eventBus, taskRepository, logger)
+    setupDomainEventHandlers(eventBus, taskService, logger)
 
     return {
         taskRepository,
+        taskService,
         eventBus,
         logger
     }
@@ -54,178 +56,124 @@ export function createTaskDomainConfig(): TaskDomainConfig {
 /**
  * Set up event handlers for task domain
  * 
- * Connects UI events to repository operations through the EventBus.
+ * Connects UI events to service operations through the EventBus.
  * This establishes the event-driven architecture pattern.
  * 
  * @param eventBus - The event bus instance
- * @param taskRepository - The task repository instance
+ * @param taskService - The task service instance
  * @param logger - The logger instance
  */
 function setupDomainEventHandlers(
     eventBus: EventBus,
-    taskRepository: TaskRepository,
+    taskService: TaskService,
     logger: Logger
 ): void {
-    const correlationId = logger.getCurrentCorrelationId()
-
-    // UI.TASK.CREATE -> Repository save operation
+    // UI.TASK.CREATE -> TaskService.createTask
     eventBus.subscribe('UI.TASK.CREATE', async (event) => {
         logger.debug('Handling UI.TASK.CREATE event', {
             event: event.type,
-            payload: event.payload,
-            correlationId
+            payload: event.payload
         })
 
         try {
-            await taskRepository.save(event.payload.task)
+            const task = await taskService.createTask(event.payload)
 
-            // Publish domain event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.CREATED',
-                payload: { task: event.payload.task },
-                timestamp: new Date(),
-                correlationId
-            })
-
-            logger.debug('Task created successfully', {
-                taskId: event.payload.task.id,
-                correlationId
+            logger.debug('Task created successfully via service', {
+                taskId: task.id
             })
         } catch (error) {
-            logger.error('Failed to create task', error as Error, {
-                taskId: event.payload.task.id,
-                correlationId
+            logger.error('Failed to create task via service', error as Error, {
+                payload: event.payload
             })
 
             // Publish error event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.CREATE_FAILED',
-                payload: { error: (error as Error).message, task: event.payload.task },
-                timestamp: new Date(),
-                correlationId
+            await eventBus.publish('DOMAIN.TASK.CREATE_FAILED', {
+                error: (error as Error).message,
+                input: event.payload
             })
         }
     })
 
-    // UI.TASK.TOGGLE -> Repository save operation
+    // UI.TASK.TOGGLE -> TaskService.toggleTask
     eventBus.subscribe('UI.TASK.TOGGLE', async (event) => {
         logger.debug('Handling UI.TASK.TOGGLE event', {
             event: event.type,
-            payload: event.payload,
-            correlationId
+            payload: event.payload
         })
 
         try {
-            await taskRepository.save(event.payload.task)
+            const task = await taskService.toggleTask(event.payload.taskId)
 
-            // Publish domain event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.TOGGLED',
-                payload: { task: event.payload.task },
-                timestamp: new Date(),
-                correlationId
-            })
-
-            logger.debug('Task toggled successfully', {
-                taskId: event.payload.task.id,
-                completed: event.payload.task.completed,
-                correlationId
+            logger.debug('Task toggled successfully via service', {
+                taskId: task.id,
+                completed: task.completed
             })
         } catch (error) {
-            logger.error('Failed to toggle task', error as Error, {
-                taskId: event.payload.task.id,
-                correlationId
+            logger.error('Failed to toggle task via service', error as Error, {
+                taskId: event.payload.taskId
             })
 
             // Publish error event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.TOGGLE_FAILED',
-                payload: { error: (error as Error).message, task: event.payload.task },
-                timestamp: new Date(),
-                correlationId
+            await eventBus.publish('DOMAIN.TASK.TOGGLE_FAILED', {
+                error: (error as Error).message,
+                taskId: event.payload.taskId
             })
         }
     })
 
-    // UI.TASK.DELETE -> Repository delete operation
+    // UI.TASK.DELETE -> TaskService.deleteTask
     eventBus.subscribe('UI.TASK.DELETE', async (event) => {
         logger.debug('Handling UI.TASK.DELETE event', {
             event: event.type,
-            payload: event.payload,
-            correlationId
+            payload: event.payload
         })
 
         try {
-            await taskRepository.delete(event.payload.taskId)
+            await taskService.deleteTask(event.payload.taskId)
 
-            // Publish domain event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.DELETED',
-                payload: { taskId: event.payload.taskId },
-                timestamp: new Date(),
-                correlationId
-            })
-
-            logger.debug('Task deleted successfully', {
-                taskId: event.payload.taskId,
-                correlationId
+            logger.debug('Task deleted successfully via service', {
+                taskId: event.payload.taskId
             })
         } catch (error) {
-            logger.error('Failed to delete task', error as Error, {
-                taskId: event.payload.taskId,
-                correlationId
+            logger.error('Failed to delete task via service', error as Error, {
+                taskId: event.payload.taskId
             })
 
             // Publish error event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.DELETE_FAILED',
-                payload: { error: (error as Error).message, taskId: event.payload.taskId },
-                timestamp: new Date(),
-                correlationId
+            await eventBus.publish('DOMAIN.TASK.DELETE_FAILED', {
+                error: (error as Error).message,
+                taskId: event.payload.taskId
             })
         }
     })
 
-    // UI.TASK.LOAD_ALL -> Repository findAll operation
+    // UI.TASK.LOAD_ALL -> TaskService.getAllTasks
     eventBus.subscribe('UI.TASK.LOAD_ALL', async (event) => {
         logger.debug('Handling UI.TASK.LOAD_ALL event', {
-            event: event.type,
-            correlationId
+            event: event.type
         })
 
         try {
-            const tasks = await taskRepository.findAll()
+            const tasks = await taskService.getAllTasks()
 
-            // Publish domain event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.LOADED',
-                payload: { tasks },
-                timestamp: new Date(),
-                correlationId
-            })
+            // Publish success event with tasks
+            await eventBus.publish('DOMAIN.TASK.LOADED', { tasks })
 
-            logger.debug('Tasks loaded successfully', {
-                taskCount: tasks.length,
-                correlationId
+            logger.debug('Tasks loaded successfully via service', {
+                taskCount: tasks.length
             })
         } catch (error) {
-            logger.error('Failed to load tasks', error as Error, {
-                correlationId
-            })
+            logger.error('Failed to load tasks via service', error as Error)
 
             // Publish error event
-            eventBus.publish({
-                type: 'DOMAIN.TASK.LOAD_FAILED',
-                payload: { error: (error as Error).message },
-                timestamp: new Date(),
-                correlationId
+            await eventBus.publish('DOMAIN.TASK.LOAD_FAILED', {
+                error: (error as Error).message
             })
         }
     })
 
     logger.info('Domain event handlers registered', {
-        handlers: ['UI.TASK.CREATE', 'UI.TASK.TOGGLE', 'UI.TASK.DELETE', 'UI.TASK.LOAD_ALL'],
-        correlationId
+        handlers: ['UI.TASK.CREATE', 'UI.TASK.TOGGLE', 'UI.TASK.DELETE', 'UI.TASK.LOAD_ALL']
     })
 }
 
@@ -237,11 +185,9 @@ function setupDomainEventHandlers(
  */
 export function resetTaskDomainConfig(config: TaskDomainConfig): void {
     const logger = config.logger
-    const correlationId = logger.getCurrentCorrelationId()
 
     logger.debug('Resetting task domain configuration', {
-        environment: 'TEST',
-        correlationId
+        environment: 'TEST'
     })
 
     // Clear repository data if it's a MemoryTaskRepository
@@ -249,13 +195,11 @@ export function resetTaskDomainConfig(config: TaskDomainConfig): void {
         config.taskRepository.reset()
     }
 
-    // Clear event bus (if needed for testing)
-    config.eventBus.clearAllSubscriptions()
+    // Clear event bus
+    config.eventBus.clear()
 
     // Re-setup event handlers
-    setupDomainEventHandlers(config.eventBus, config.taskRepository, logger)
+    setupDomainEventHandlers(config.eventBus, config.taskService, logger)
 
-    logger.debug('Task domain configuration reset complete', {
-        correlationId
-    })
+    logger.debug('Task domain configuration reset complete')
 }

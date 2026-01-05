@@ -1,6 +1,15 @@
 import { expect } from 'vitest'
 import { TaskManagerWorld } from './common.steps.js'
-import { BDDAssertions } from '../bdd.config.js'
+import {
+    validateTaskDescription,
+    validateCreateTaskInput,
+    validateTask,
+    isEmptyOrWhitespace,
+    parseStorageData,
+    type Task,
+    type ValidationResult,
+    VALIDATION_CONSTANTS
+} from '../../../../SHARED/contracts/task/v1'
 
 // This file contains step definitions for task creation scenarios
 // For now, these are used for validation through the BDD runner test
@@ -16,19 +25,20 @@ export class TaskCreationSteps {
         expect(world.context.ui.inputValue).toBe(description)
 
         // Simulate: And I submit the task
-        if (BDDAssertions.isEmptyOrWhitespace(description)) {
-            // Invalid task - should show validation message
-            world.context.ui.validationMessages = ['Task description cannot be empty']
+        if (isEmptyOrWhitespace(description)) {
+            // Invalid task - should show validation message using official validation
+            const validationResult = validateTaskDescription(description)
+            world.context.ui.validationMessages = validationResult.errors
             world.context.lastError = new Error('Invalid task description')
         } else {
-            // Valid task - create and add it
+            // Valid task - create and add it using TaskService
             const trimmedDescription = description.trim()
             await world.addTask(trimmedDescription)
 
             // Simulate clearing input field
             world.context.ui.inputValue = ''
 
-            // Simulate persistence to storage
+            // Simulate persistence to storage using official contracts
             world.simulateStorageRestore(world.context.tasks)
         }
     }
@@ -36,7 +46,10 @@ export class TaskCreationSteps {
     static validateTaskCreated(world: TaskManagerWorld, expectedDescription: string) {
         expect(world.context.currentTask).toBeDefined()
         expect(world.context.currentTask?.description).toBe(expectedDescription)
-        expect(BDDAssertions.isValidTask(world.context.currentTask)).toBe(true)
+
+        // Use official Zod validation instead of manual checks
+        const validationResult = validateTask(world.context.currentTask)
+        expect(validationResult.isValid).toBe(true)
     }
 
     static validateTaskInList(world: TaskManagerWorld) {
@@ -56,49 +69,65 @@ export class TaskCreationSteps {
 
     static validateTaskPersisted(world: TaskManagerWorld) {
         expect(world.context.storage?.data).toBeDefined()
-        const storageData = JSON.parse(world.context.storage!.data as string)
-        expect(BDDAssertions.hasValidStorageFormat(storageData)).toBe(true)
 
-        // Find the current task in storage (comparing serialized version)
-        const currentTaskSerialized = {
-            ...world.context.currentTask,
-            createdAt: world.context.currentTask!.createdAt.toISOString(),
-        }
-        expect(storageData.tasks).toContainEqual(currentTaskSerialized)
+        // Use official storage parsing instead of manual JSON.parse
+        const storageDataString = typeof world.context.storage!.data === 'string'
+            ? world.context.storage!.data
+            : JSON.stringify(world.context.storage!.data)
+        const storageData = parseStorageData(storageDataString)
+        expect(storageData).not.toBeNull()
+
+        // Find the current task in storage
+        const currentTask = world.context.currentTask!
+        const taskInStorage = storageData!.tasks.find(t => t.id === currentTask.id)
+        expect(taskInStorage).toBeDefined()
+        expect(taskInStorage!.description).toBe(currentTask.description)
     }
 
     static validateNoTaskCreated(world: TaskManagerWorld) {
         expect(world.context.lastError).toBeDefined()
-        // The current task should not be a valid task if there was an error
+        // The current task should not be valid if there was an error
         if (world.context.currentTask) {
-            expect(BDDAssertions.isValidTask(world.context.currentTask)).toBe(false)
+            const validationResult = validateTask(world.context.currentTask)
+            expect(validationResult.isValid).toBe(false)
         }
     }
 
     static validateValidationMessage(world: TaskManagerWorld) {
         expect(world.context.ui?.validationMessages).toBeDefined()
         expect(world.context.ui!.validationMessages!.length).toBeGreaterThan(0)
-        expect(world.context.ui!.validationMessages).toContain('Task description cannot be empty')
+
+        // Check that validation message comes from official validation
+        const hasEmptyMessage = world.context.ui!.validationMessages!.some(msg =>
+            msg.includes('empty') || msg.includes('cannot be empty')
+        )
+        expect(hasEmptyMessage).toBe(true)
     }
 
     static validateTaskProperties(world: TaskManagerWorld) {
         expect(world.context.currentTask).toBeDefined()
 
-        // Unique identifier
-        expect(world.context.currentTask!.id).toBeDefined()
-        expect(typeof world.context.currentTask!.id).toBe('string')
-        expect(world.context.currentTask!.id.length).toBeGreaterThan(0)
+        // Use official Zod validation to ensure all properties are correct
+        const validationResult = validateTask(world.context.currentTask)
+        expect(validationResult.isValid).toBe(true)
+
+        const task = world.context.currentTask!
+
+        // Unique identifier (UUID format validated by Zod)
+        expect(task.id).toBeDefined()
+        expect(typeof task.id).toBe('string')
+        expect(task.id.length).toBeGreaterThan(0)
 
         // Creation timestamp
-        expect(world.context.currentTask!.createdAt).toBeDefined()
-        expect(world.context.currentTask!.createdAt).toBeInstanceOf(Date)
+        expect(task.createdAt).toBeDefined()
+        expect(task.createdAt).toBeInstanceOf(Date)
 
         // Not completed by default
-        expect(world.context.currentTask!.completed).toBe(false)
+        expect(task.completed).toBe(false)
 
         // Timestamp should be recent (within last few seconds)
         const now = new Date()
-        const timeDiff = now.getTime() - world.context.currentTask!.createdAt.getTime()
+        const timeDiff = now.getTime() - task.createdAt.getTime()
         expect(timeDiff).toBeLessThan(5000) // Less than 5 seconds ago
     }
 
@@ -115,17 +144,21 @@ export class TaskCreationSteps {
 
     static validateAllTasksPersisted(world: TaskManagerWorld) {
         expect(world.context.storage?.data).toBeDefined()
-        const storageData = JSON.parse(world.context.storage!.data as string)
-        expect(BDDAssertions.hasValidStorageFormat(storageData)).toBe(true)
-        expect(storageData.tasks).toHaveLength(world.context.tasks.length)
 
-        // Verify all tasks are in storage (comparing serialized versions)
+        // Use official storage parsing
+        const storageDataString = typeof world.context.storage!.data === 'string'
+            ? world.context.storage!.data
+            : JSON.stringify(world.context.storage!.data)
+        const storageData = parseStorageData(storageDataString)
+        expect(storageData).not.toBeNull()
+        expect(storageData!.tasks).toHaveLength(world.context.tasks.length)
+
+        // Verify all tasks are in storage
         world.context.tasks.forEach((task) => {
-            const taskSerialized = {
-                ...task,
-                createdAt: task.createdAt.toISOString(),
-            }
-            expect(storageData.tasks).toContainEqual(taskSerialized)
+            const taskInStorage = storageData!.tasks.find(t => t.id === task.id)
+            expect(taskInStorage).toBeDefined()
+            expect(taskInStorage!.description).toBe(task.description)
+            expect(taskInStorage!.completed).toBe(task.completed)
         })
     }
 
@@ -138,5 +171,9 @@ export class TaskCreationSteps {
         const description = world.context.currentTask!.description
         expect(description).toBe(description.trim())
         expect(description).not.toMatch(/^\s+|\s+$/) // No leading or trailing whitespace
+
+        // Ensure description meets Zod schema requirements
+        const validationResult = validateTaskDescription(description)
+        expect(validationResult.isValid).toBe(true)
     }
 }

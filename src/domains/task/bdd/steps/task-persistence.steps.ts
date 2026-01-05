@@ -1,8 +1,13 @@
 import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from 'vitest'
 import { TaskManagerWorld } from './common.steps'
-import { MemoryTaskRepository } from '../../repositories/MemoryTaskRepository'
-import { Task } from '../../../../SHARED/contracts/task/v1/TaskSchema'
+import {
+  validateTask,
+  parseStorageData,
+  type Task,
+  TaskSchema,
+  VALIDATION_CONSTANTS
+} from '../../../../SHARED/contracts/task/v1'
 import { v4 as uuidv4 } from 'uuid'
 
 // Storage state setup steps
@@ -12,12 +17,20 @@ Given('local storage is empty', function (this: TaskManagerWorld) {
 })
 
 Given('local storage contains saved tasks:', async function (this: TaskManagerWorld, dataTable) {
-  const tasks = dataTable.hashes().map((row: any) => ({
-    id: uuidv4(),
-    description: row.description,
-    completed: row.completed === 'true',
-    createdAt: new Date(row.createdAt),
-  }))
+  const tasks = dataTable.hashes().map((row: any) => {
+    const task: Task = {
+      id: uuidv4(),
+      description: row.description,
+      completed: row.completed === 'true',
+      createdAt: new Date(row.createdAt),
+    }
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+
+    return task
+  })
 
   // Save tasks using repository
   for (const task of tasks) {
@@ -31,12 +44,16 @@ Given('local storage contains saved tasks:', async function (this: TaskManagerWo
 Given(
   'local storage contains a completed task {string}',
   async function (this: TaskManagerWorld, description: string) {
-    const task = {
+    const task: Task = {
       id: uuidv4(),
       description,
       completed: true,
       createdAt: new Date(),
     }
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
 
     await this.repository.save(task)
     this.context.storage = { data: 'repository-managed' }
@@ -48,12 +65,16 @@ Given(
   'local storage contains an incomplete task {string}',
   async function (this: TaskManagerWorld, description: string) {
     const existingTasks = this.context.tasks || []
-    const task = {
+    const task: Task = {
       id: uuidv4(),
       description,
       completed: false,
       createdAt: new Date(),
     }
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
 
     await this.repository.save(task)
     const allTasks = [...existingTasks, task]
@@ -77,12 +98,16 @@ Given('local storage contains invalid JSON data', function (this: TaskManagerWor
 Given(
   'local storage contains task data without version information',
   async function (this: TaskManagerWorld) {
-    const task = {
+    const task: Task = {
       id: uuidv4(),
       description: 'Test task',
       completed: false,
       createdAt: new Date(),
     }
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
 
     await this.repository.save(task)
     this.context.storage = { data: 'repository-managed-no-version' }
@@ -93,12 +118,16 @@ Given(
 Given(
   'local storage contains task data with version {string}',
   async function (this: TaskManagerWorld, version: string) {
-    const task = {
+    const task: Task = {
       id: uuidv4(),
       description: 'Test task',
       completed: false,
       createdAt: new Date(),
     }
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
 
     await this.repository.save(task)
     this.context.storage = { data: `repository-managed-version-${version}` }
@@ -117,18 +146,31 @@ Given(
   async function (this: TaskManagerWorld, description: string) {
     const task = await this.addTask(description)
     task.completed = false
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+
     await this.repository.save(task)
     this.context.storage = { data: 'repository-managed' }
   }
 )
 
 Given('I have tasks:', async function (this: TaskManagerWorld, dataTable) {
-  const tasks = dataTable.hashes().map((row: any) => ({
-    id: uuidv4(),
-    description: row.description,
-    completed: row.completed === 'true',
-    createdAt: new Date(),
-  }))
+  const tasks = dataTable.hashes().map((row: any) => {
+    const task: Task = {
+      id: uuidv4(),
+      description: row.description,
+      completed: row.completed === 'true',
+      createdAt: new Date(),
+    }
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+
+    return task
+  })
 
   for (const task of tasks) {
     await this.repository.save(task)
@@ -143,6 +185,13 @@ When('the application starts', async function (this: TaskManagerWorld) {
   // Simulate application startup by loading from repository
   try {
     const tasks = await this.repository.findAll()
+
+    // Validate all loaded tasks using official Zod schema
+    tasks.forEach(task => {
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
+    })
+
     this.context.tasks = tasks
     this.context.storage = { data: 'repository-managed' }
   } catch (error) {
@@ -161,6 +210,11 @@ When('I create a new task {string}', async function (this: TaskManagerWorld, des
 When('I mark the task as completed', async function (this: TaskManagerWorld) {
   if (this.context.currentTask) {
     this.context.currentTask.completed = true
+
+    // Validate updated task using official Zod schema
+    const validationResult = validateTask(this.context.currentTask)
+    expect(validationResult.isValid).toBe(true)
+
     await this.repository.save(this.context.currentTask)
     this.context.storage = { data: 'repository-managed' }
   }
@@ -169,6 +223,11 @@ When('I mark the task as completed', async function (this: TaskManagerWorld) {
 When('I mark the task as incomplete again', async function (this: TaskManagerWorld) {
   if (this.context.currentTask) {
     this.context.currentTask.completed = false
+
+    // Validate updated task using official Zod schema
+    const validationResult = validateTask(this.context.currentTask)
+    expect(validationResult.isValid).toBe(true)
+
     await this.repository.save(this.context.currentTask)
     this.context.storage = { data: 'repository-managed' }
   }
@@ -185,12 +244,18 @@ When('I delete the task {string}', async function (this: TaskManagerWorld, descr
 When('I simulate an application restart', async function (this: TaskManagerWorld) {
   // Save current state to repository (already done by previous operations)
   // Clear context and reload from repository
-  const currentTasks = [...this.context.tasks]
   this.resetContext()
 
   // Reload from repository
   try {
     const reloadedTasks = await this.repository.findAll()
+
+    // Validate all reloaded tasks using official Zod schema
+    reloadedTasks.forEach(task => {
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
+    })
+
     this.context.tasks = reloadedTasks
     this.context.storage = { data: 'repository-managed' }
   } catch (error) {
@@ -200,7 +265,7 @@ When('I simulate an application restart', async function (this: TaskManagerWorld
 
 When(
   'I create {int} tasks with descriptions {string} through {string}',
-  async function (this: TaskManagerWorld, count: number, startDesc: string, endDesc: string) {
+  async function (this: TaskManagerWorld, count: number, _startDesc: string, _endDesc: string) {
     for (let i = 1; i <= count; i++) {
       await this.addTask(`Task ${i}`)
     }
@@ -213,6 +278,11 @@ When('I mark every other task as completed', async function (this: TaskManagerWo
     if (i % 2 === 1) {
       // Every other task (0-indexed, so 1, 3, 5...)
       this.context.tasks[i].completed = true
+
+      // Validate updated task using official Zod schema
+      const validationResult = validateTask(this.context.tasks[i])
+      expect(validationResult.isValid).toBe(true)
+
       await this.repository.save(this.context.tasks[i])
     }
   }
@@ -249,6 +319,11 @@ When('I create multiple tasks:', async function (this: TaskManagerWorld, dataTab
   for (const row of tasks) {
     const task = await this.addTask(row.description)
     task.completed = row.completed === 'true'
+
+    // Validate updated task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+
     await this.repository.save(task)
   }
   this.context.storage = { data: 'repository-managed' }
@@ -275,10 +350,14 @@ Then('the task list should contain {int} tasks', function (this: TaskManagerWorl
 Then(
   'the tasks should be loaded with their original descriptions',
   function (this: TaskManagerWorld) {
-    // Verify tasks in context match their original descriptions
-    this.context.tasks.forEach((task, index) => {
+    // Verify tasks in context match their original descriptions and are valid
+    this.context.tasks.forEach((task) => {
       expect(task.description).toBeDefined()
       expect(typeof task.description).toBe('string')
+
+      // Validate task using official Zod schema
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
     })
   }
 )
@@ -287,8 +366,12 @@ Then(
   'the tasks should be loaded with their original completion status',
   function (this: TaskManagerWorld) {
     // Verify tasks in context have valid completion status
-    this.context.tasks.forEach((task, index) => {
+    this.context.tasks.forEach((task) => {
       expect(typeof task.completed).toBe('boolean')
+
+      // Validate task using official Zod schema
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
     })
   }
 )
@@ -297,9 +380,13 @@ Then(
   'the tasks should be loaded with their original creation timestamps',
   function (this: TaskManagerWorld) {
     // Verify tasks in context have valid creation timestamps
-    this.context.tasks.forEach((task, index) => {
+    this.context.tasks.forEach((task) => {
       expect(task.createdAt).toBeInstanceOf(Date)
       expect(isNaN(task.createdAt.getTime())).toBe(false)
+
+      // Validate task using official Zod schema
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
     })
   }
 )
@@ -319,6 +406,10 @@ Then(
     const task = this.findTaskByDescription(description)
     expect(task).toBeDefined()
     expect(task?.completed).toBe(true)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
   }
 )
 
@@ -328,6 +419,10 @@ Then(
     const task = this.findTaskByDescription(description)
     expect(task).toBeDefined()
     expect(task?.completed).toBe(false)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
   }
 )
 
@@ -337,6 +432,10 @@ Then(
     // This would be tested in UI components - here we just verify the data is correct
     this.context.tasks.forEach((task) => {
       expect(typeof task.completed).toBe('boolean')
+
+      // Validate task using official Zod schema
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
     })
   }
 )
@@ -345,11 +444,23 @@ Then('the task should be immediately saved to local storage', async function (th
   const tasks = await this.repository.findAll()
   expect(tasks).toHaveLength(this.context.tasks.length)
   expect(tasks.length).toBeGreaterThan(0)
+
+  // Validate all saved tasks using official Zod schema
+  tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
 
 Then('local storage should contain the task data', async function (this: TaskManagerWorld) {
   const tasks = await this.repository.findAll()
   expect(tasks.length).toBeGreaterThan(0)
+
+  // Validate all stored tasks using official Zod schema
+  tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
 
 Then('the storage format should include version information', function (this: TaskManagerWorld) {
@@ -369,8 +480,12 @@ Then(
     expect(tasks.length).toBeGreaterThan(0)
 
     if (this.context.currentTask) {
-      const storedTask = tasks.find((t: any) => t.id === this.context.currentTask!.id)
+      const storedTask = tasks.find((t: Task) => t.id === this.context.currentTask!.id)
       expect(storedTask?.completed).toBe(this.context.currentTask.completed)
+
+      // Validate stored task using official Zod schema
+      const validationResult = validateTask(storedTask)
+      expect(validationResult.isValid).toBe(true)
     }
   }
 )
@@ -381,8 +496,12 @@ Then(
     const tasks = await this.repository.findAll()
 
     if (this.context.currentTask) {
-      const storedTask = tasks.find((t: any) => t.id === this.context.currentTask!.id)
+      const storedTask = tasks.find((t: Task) => t.id === this.context.currentTask!.id)
       expect(storedTask?.completed).toBe(this.context.currentTask.completed)
+
+      // Validate stored task using official Zod schema
+      const validationResult = validateTask(storedTask)
+      expect(validationResult.isValid).toBe(true)
     }
   }
 )
@@ -393,8 +512,12 @@ Then(
     const tasks = await this.repository.findAll()
 
     if (this.context.currentTask) {
-      const storedTask = tasks.find((t: any) => t.id === this.context.currentTask!.id)
+      const storedTask = tasks.find((t: Task) => t.id === this.context.currentTask!.id)
       expect(storedTask?.completed).toBe(false) // Should be false after marking incomplete again
+
+      // Validate stored task using official Zod schema
+      const validationResult = validateTask(storedTask)
+      expect(validationResult.isValid).toBe(true)
     }
   }
 )
@@ -413,17 +536,25 @@ Then(
     const tasks = await this.repository.findAll()
     expect(tasks).toHaveLength(1)
     expect(tasks[0].description).toBe(description)
+
+    // Validate stored task using official Zod schema
+    const validationResult = validateTask(tasks[0])
+    expect(validationResult.isValid).toBe(true)
   }
 )
 
 Then('the remaining task data should be intact', async function (this: TaskManagerWorld) {
   const tasks = await this.repository.findAll()
 
-  tasks.forEach((storedTask: any) => {
+  tasks.forEach((storedTask: Task) => {
     const contextTask = this.context.tasks.find((t) => t.id === storedTask.id)
     expect(contextTask).toBeDefined()
     expect(storedTask.description).toBe(contextTask!.description)
     expect(storedTask.completed).toBe(contextTask!.completed)
+
+    // Validate stored task using official Zod schema
+    const validationResult = validateTask(storedTask)
+    expect(validationResult.isValid).toBe(true)
   })
 })
 
@@ -449,6 +580,10 @@ Then('a new valid storage structure should be created', async function (this: Ta
   const tasks = await this.repository.findAll()
   expect(tasks.length).toBeGreaterThan(0)
   expect(tasks.find(t => t.id === task.id)).toBeDefined()
+
+  // Validate created task using official Zod schema
+  const validationResult = validateTask(task)
+  expect(validationResult.isValid).toBe(true)
 })
 
 Then('the corrupted data should be handled gracefully', function (this: TaskManagerWorld) {
@@ -462,10 +597,20 @@ Then('the application should create a fresh storage structure', async function (
   const tasks = await this.repository.findAll()
   expect(tasks.length).toBeGreaterThan(0)
   expect(tasks.find(t => t.id === task.id)).toBeDefined()
+
+  // Validate fresh task using official Zod schema
+  const validationResult = validateTask(task)
+  expect(validationResult.isValid).toBe(true)
 })
 
 Then('the application should load the tasks successfully', function (this: TaskManagerWorld) {
   expect(this.context.tasks.length).toBeGreaterThan(0)
+
+  // Validate all loaded tasks using official Zod schema
+  this.context.tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
 
 Then(
@@ -482,6 +627,10 @@ Then('the tasks should be displayed correctly', function (this: TaskManagerWorld
     expect(task.description).toBeDefined()
     expect(typeof task.completed).toBe('boolean')
     expect(task.createdAt).toBeInstanceOf(Date)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
   })
 })
 
@@ -530,11 +679,15 @@ Then(
   async function (this: TaskManagerWorld) {
     const tasks = await this.repository.findAll()
 
-    tasks.forEach((task: any) => {
+    tasks.forEach((task: Task) => {
       expect(task.id).toBeDefined()
       expect(task.description).toBeDefined()
       expect(typeof task.completed).toBe('boolean')
       expect(task.createdAt).toBeDefined()
+
+      // Validate task using official Zod schema
+      const validationResult = validateTask(task)
+      expect(validationResult.isValid).toBe(true)
     })
   }
 )
@@ -549,6 +702,10 @@ Then('all creation timestamps should be valid dates', function (this: TaskManage
   this.context.tasks.forEach((task) => {
     expect(task.createdAt).toBeInstanceOf(Date)
     expect(isNaN(task.createdAt.getTime())).toBe(false)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
   })
 })
 
@@ -557,12 +714,20 @@ Then(
   function (this: TaskManagerWorld, description: string) {
     const task = this.findTaskByDescription(description)
     expect(task).toBeDefined()
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
   }
 )
 
 Then('the task should still be marked as completed', function (this: TaskManagerWorld) {
   if (this.context.currentTask) {
     expect(this.context.currentTask.completed).toBe(true)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(this.context.currentTask)
+    expect(validationResult.isValid).toBe(true)
   }
 })
 
@@ -572,11 +737,21 @@ Then('the task should have the same ID and creation timestamp', function (this: 
   if (this.context.currentTask) {
     expect(this.context.currentTask.id).toBeDefined()
     expect(this.context.currentTask.createdAt).toBeInstanceOf(Date)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(this.context.currentTask)
+    expect(validationResult.isValid).toBe(true)
   }
 })
 
 Then('all {int} tasks should be restored', function (this: TaskManagerWorld, count: number) {
   expect(this.context.tasks).toHaveLength(count)
+
+  // Validate all restored tasks using official Zod schema
+  this.context.tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
 
 Then('the completion status of each task should be preserved', function (this: TaskManagerWorld) {
@@ -587,6 +762,10 @@ Then('the completion status of each task should be preserved', function (this: T
     } else {
       expect(task.completed).toBe(false)
     }
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
   })
 })
 
@@ -604,6 +783,10 @@ Then('no data should be lost or corrupted', function (this: TaskManagerWorld) {
     expect(task.description).toBeDefined()
     expect(typeof task.completed).toBe('boolean')
     expect(task.createdAt).toBeInstanceOf(Date)
+
+    // Validate task using official Zod schema
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
   })
 })
 
@@ -628,21 +811,45 @@ Then('or an appropriate error should be displayed to the user', function (this: 
 Then('all tasks should be saved to local storage', async function (this: TaskManagerWorld) {
   const tasks = await this.repository.findAll()
   expect(tasks).toHaveLength(this.context.tasks.length)
+
+  // Validate all saved tasks using official Zod schema
+  tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
 
 Then('no data should be lost due to race conditions', function (this: TaskManagerWorld) {
   expect(this.context.tasks).toHaveLength(3) // Task A, B, C
   expect(this.context.tasks.map((t) => t.description)).toEqual(['Task A', 'Task B', 'Task C'])
+
+  // Validate all tasks using official Zod schema
+  this.context.tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
 
 Then('the storage should remain in a consistent state', async function (this: TaskManagerWorld) {
   const tasks = await this.repository.findAll()
   expect(tasks).toHaveLength(this.context.tasks.length)
+
+  // Validate all stored tasks using official Zod schema
+  tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
 
 Then('all tasks should be retrievable after restart', async function (this: TaskManagerWorld) {
   // Simulate restart by reloading from repository
   const tasks = await this.repository.findAll()
   expect(tasks).toHaveLength(3)
-  expect(tasks.map((t: any) => t.description)).toEqual(['Task A', 'Task B', 'Task C'])
+  expect(tasks.map((t: Task) => t.description)).toEqual(['Task A', 'Task B', 'Task C'])
+
+  // Validate all retrieved tasks using official Zod schema
+  tasks.forEach(task => {
+    const validationResult = validateTask(task)
+    expect(validationResult.isValid).toBe(true)
+  })
 })
